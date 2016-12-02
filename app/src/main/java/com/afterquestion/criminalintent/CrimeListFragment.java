@@ -1,6 +1,6 @@
 package com.afterquestion.criminalintent;
 
-import android.content.Intent;
+import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
@@ -28,13 +28,31 @@ public class CrimeListFragment extends Fragment {
     private RecyclerView mCrimeRecyclerView;
     private CrimeAdapter mAdapter;
     private boolean mSubtitleVisible;
+    private Callbacks mCallbacks;
+
+    /**
+     * Required interface for hosting activities.
+     */
+    public interface Callbacks {
+        void onCrimeSelected(Crime crime);
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
     }
-
+//    @Override
+//    public void onAttach(Activity activity) {
+//        super.onAttach(activity);
+//        mCallbacks = (Callbacks) activity;
+//    }
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+//        把传进来的 Activity 转换成 接口
+        mCallbacks = (Callbacks)getActivity();
+    }
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_crime_list, container, false);
@@ -56,7 +74,7 @@ public class CrimeListFragment extends Fragment {
         updateUI();
     }
 
-    private void updateUI() {
+    public void updateUI() {
         CrimeLab crimeLab = CrimeLab.get(getActivity());
         List<Crime> crimes = crimeLab.getCrimes();
         if (mAdapter == null) {
@@ -68,7 +86,11 @@ public class CrimeListFragment extends Fragment {
         }
         updateSubtitle(); // 创建 Crime 返回之后，自动加壹
     }
-
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mCallbacks = null;
+    }
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
@@ -95,11 +117,15 @@ public class CrimeListFragment extends Fragment {
             case R.id.menu_item_new_crime:
                 Crime crime = new Crime();
                 CrimeLab.get(getActivity()).addCrime(crime);
-                Intent intent = CrimePagerActivity
-                        .newIntent(getActivity(), crime.getId());
-                startActivity(intent);
+//                Intent intent = CrimePagerActivity
+//                        .newIntent(getActivity(), crime.getId());
+//                startActivity(intent);
+                updateUI(); // 刷新屏幕
+//                用 接口来 调用
+                mCallbacks.onCrimeSelected(crime);
                 return true;
             case R.id.menu_item_show_subtitle:
+//                显示 Crime 个数
                 mSubtitleVisible = !mSubtitleVisible;
                 getActivity().invalidateOptionsMenu();
                 updateSubtitle();
@@ -138,8 +164,9 @@ public class CrimeListFragment extends Fragment {
 
         @Override
         public void onClick(View v) {
-            Intent intent = CrimePagerActivity.newIntent(getActivity(), mCrime.getId());
-            startActivity(intent);
+//            Intent intent = CrimePagerActivity.newIntent(getActivity(), mCrime.getId());
+//            startActivity(intent);
+            mCallbacks.onCrimeSelected(mCrime);
         }
 
         public void bindCrime(Crime crime) {
